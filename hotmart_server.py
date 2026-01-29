@@ -7,21 +7,14 @@ import requests
 app = Flask(__name__)
 
 # ================= CONFIGURAÇÕES =================
-TOKEN_VALIDACAO = "meu_token_secreto"
-ARQUIVO_VENDAS = "vendas_hotmart.json"
-ARQUIVO_TOKEN = "hotmart_token.json"
-
 CLIENT_ID = "9134999a-4919-4a96-bc93-60f67c990981"
-CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 REDIRECT_URI = os.getenv("REDIRECT_URI")
 TOKEN_VALIDACAO = os.getenv("TOKEN_VALIDACAO")
-#CLIENT_SECRET = "cdb818a2-101a-4883-99bd-0de293d83cbf"
 
-# 🔴 USE SEMPRE O DOMÍNIO DO NGROK AQUI
-REDIRECT_URI = "https://unverdantly-intermundane-sabina.ngrok-free.dev/hotmart/callback"
-
-
+ARQUIVO_VENDAS = "vendas_hotmart.json"
+ARQUIVO_TOKEN = "hotmart_token.json"
 
 # ================= UTILIDADES =================
 def salvar_venda(venda):
@@ -73,7 +66,7 @@ def trocar_code_por_token(code):
 
 
 # ================= ROTAS =================
-@app.route("/", methods=["GET","POST"])
+@app.route("/", methods=["GET"])
 def home():
     return jsonify({"status": "Servidor Hotmart ativo"})
 
@@ -121,7 +114,6 @@ def hotmart_vendas():
     access_token = token_data["access_token"]
 
     url = "https://developers.hotmart.com/payments/api/v1/sales"
-
     headers = {
         "Authorization": f"Bearer {access_token}"
     }
@@ -143,12 +135,3 @@ def listar_vendas():
         return jsonify([])
     with open(ARQUIVO_VENDAS, "r", encoding="utf-8") as f:
         return jsonify(json.load(f))
-
-
-# ================= START =================
-#if __name__ == "__main__":
-    #app.run(host="0.0.0.0", port=5000)
-
-if __name__ == "__main__":
-    app.run()
-
