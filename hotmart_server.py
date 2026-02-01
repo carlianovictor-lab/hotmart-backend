@@ -16,9 +16,11 @@ TOKEN_VALIDACAO = os.getenv("TOKEN_VALIDACAO")
 ARQUIVO_VENDAS = "vendas_hotmart.json"
 ARQUIVO_TOKEN = "hotmart_token.json"
 
+
 # ================= UTILIDADES =================
 def salvar_venda(venda):
     vendas = []
+
     if os.path.exists(ARQUIVO_VENDAS):
         with open(ARQUIVO_VENDAS, "r", encoding="utf-8") as f:
             vendas = json.load(f)
@@ -38,6 +40,7 @@ def salvar_token(token):
 def carregar_token():
     if not os.path.exists(ARQUIVO_TOKEN):
         return None
+
     with open(ARQUIVO_TOKEN, "r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -65,6 +68,36 @@ def trocar_code_por_token(code):
     return response.json()
 
 
+# ================= NORMALIZAÇÃO =================
+def normalizar_venda(dados):
+    try:
+        data = dados.get("data", {})
+
+        produto = data.get("product", {}).get("name", "Produto desconhecido")
+        comprador = data.get("buyer", {}).get("name", "Cliente")
+        valor = (
+            data.get("purchase", {})
+            .get("price", {})
+            .get("value", 0)
+        )
+        data_compra = (
+            data.get("purchase", {})
+            .get("approved_date")
+        )
+
+        return {
+            "produto": produto,
+            "valor": float(valor),
+            "comprador": comprador,
+            "status": dados.get("event"),
+            "data": data_compra,
+        }
+
+    except Exception as e:
+        print("❌ Erro ao normalizar venda:", e)
+        return None
+
+
 # ================= ROTAS =================
 @app.route("/", methods=["GET"])
 def home():
@@ -84,7 +117,7 @@ def hotmart_callback():
         return "❌ Falha ao obter token", 400
 
     salvar_token(token)
-    print("✅ Token salvo com sucesso")
+    print("✅ Token OAuth salvo com sucesso")
 
     return "✅ Hotmart conectada com sucesso! Pode voltar ao app."
 
@@ -97,9 +130,16 @@ def hotmart_webhook():
         return jsonify({"erro": "Token inválido"}), 401
 
     dados = request.json
-    print("📦 Venda recebida:", json.dumps(dados, indent=2, ensure_ascii=False))
 
-    salvar_venda(dados)
+    venda_normalizada = normalizar_venda(dados)
+
+    if not venda_normalizada:
+        return jsonify({"erro": "Erro ao processar venda"}), 400
+
+    salvar_venda(venda_normalizada)
+
+    print("✅ Venda normalizada salva:")
+    print(json.dumps(venda_normalizada, indent=2, ensure_ascii=False))
 
     return jsonify({"status": "ok"})
 
@@ -133,5 +173,6 @@ def hotmart_vendas():
 def listar_vendas():
     if not os.path.exists(ARQUIVO_VENDAS):
         return jsonify([])
+
     with open(ARQUIVO_VENDAS, "r", encoding="utf-8") as f:
         return jsonify(json.load(f))
